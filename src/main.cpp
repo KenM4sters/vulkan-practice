@@ -1,8 +1,7 @@
 #define GLFW_INCLUDE_VULKAN
 #include "../include/glfw3.h"
-#include <vulkan/vulkan_beta.h> 
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
+#include <vulkan/vulkan_beta.h>
+#include <glm/glm.h>
 #include <iostream>
 #include <stdexcept>
 #include <vector>
@@ -116,23 +115,25 @@ struct UniformBufferObject {
 };
 
 const std::vector<Vertex> vertices = {
-    {{-0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}},
-    {{0.5f, -0.5f}, {0.0f, 1.0f, 1.0f}},
-    {{0.5f, 0.5f}, {1.0f, 0.0f, 1.0f}},
-    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+  {{-0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}},
+  {{0.5f, -0.5f}, {0.0f, 1.0f, 1.0f}},
+  {{0.5f, 0.5f}, {1.0f, 0.0f, 1.0f}},
+  {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
 };
 
 const std::vector<uint16_t> indices = {
-    0, 1, 2, 
-    2, 3, 0
+  0, 1, 2, 
+  2, 3, 0
 };
- 
+
+
  
 class HelloTriangleApplication {
     public:
         void run() {
             initWindow();
             initVulkan();
+            processInput(window);
             mainLoop();
             cleanup();
         }
@@ -181,11 +182,10 @@ class HelloTriangleApplication {
 
         bool framebufferResized = false;
 
- 
- 
+
     void initWindow() {
         glfwInit();
-
+        
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
         window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
@@ -226,11 +226,17 @@ class HelloTriangleApplication {
       while (!glfwWindowShouldClose(window)) {    // keep application running until window closed or error 
         glfwPollEvents();
         drawFrame();
+        processInput(window);
       }
 
       vkDeviceWaitIdle(device);
     }
  
+    void processInput(GLFWwindow* window) {
+        if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+          glfwSetWindowShouldClose(window, true);
+      
+    }
  
     void cleanupSwapChain() {
       for (auto framebuffer : swapChainFramebuffers) {
@@ -842,9 +848,9 @@ class HelloTriangleApplication {
       VkDeviceMemory stagingBufferMemory;
       createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
 
-      void* data;
+      void* data; 
       vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
-          memcpy(data, vertices.data(), (size_t) bufferSize);
+      memcpy(data, vertices.data(), (size_t) bufferSize);
       vkUnmapMemory(device, stagingBufferMemory);
 
       createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
@@ -1014,7 +1020,7 @@ class HelloTriangleApplication {
 
     void updateUniformBuffer(uint32_t currentImage) {
     static auto startTime = std::chrono::high_resolution_clock::now();
-
+    static float scaleDisplacement = 1.0f;
     auto currentTime = std::chrono::high_resolution_clock::now();
     float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
@@ -1023,8 +1029,10 @@ class HelloTriangleApplication {
       ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
       ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float) swapChainExtent.height, 0.1f, 10.0f);
       ubo.proj[1][1] *= -1;
-      ubo.translation[3][0] = sin(time);
-      ubo.translation[3][1] = cos(time);
+      ubo.translation[3][0] = sin(time * scaleDisplacement) * scaleDisplacement;
+      ubo.translation[3][1] = cos(time * scaleDisplacement) * scaleDisplacement;
+
+      scaleDisplacement *= 0.9999f;
 
       memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
     }
